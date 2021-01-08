@@ -1,0 +1,13 @@
+{
+    "name": "slx/crawler",
+    "description": "Crawler de Classes CSS",
+    "keywords": [
+        "crawler",
+        "css"
+    ],
+    "require": {},
+    "require-dev": {},
+    "dependencies": {
+        "puppeteer": "^5.5.0"
+    }
+}
