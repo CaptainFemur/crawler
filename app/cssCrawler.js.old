@@ -1,6 +1,15 @@
 const puppeteer = require('puppeteer');
+// const { promises: readdir } = require('fs').readdir;
+// const { promises: readFile } = require('fs').readFile;
 const fs  = require('fs');
-
+// const { promisify } = require('util');
+const { exit } = require('process');
+const { decode } = require('punycode');
+// const readdir = promisify(require('fs').readdir);
+// const readFile = promisify(require('fs').readFile);
+const util = require('util');
+// const readFile = (fileName, callback) => util.promisify(fs.readFile)(fileName, 'utf8', callback);
+const readdir = (dirName, callback) => util.promisify(fs.readdir)(dirName, callback);
 
 
 function isBase64(str) {
@@ -28,22 +37,22 @@ function mergeArrays(...arrays) {
 }
 
 
-const checkCss = async (page, arrayCssUsed, arrayCssUnused, styles) => {
+const checkCss = async (page, arrayCssUsed, arrayCssUnused) => {
     // try {
-        //  await readdir('css/', function(err, filenames) {
-        //     if (err) {
-        //       onError(err);
-        //       return;
-        //     }
-            styles.forEach(async function(styleOfCss) {
-                // console.log('Lecture de ' + filename);
-                // fs.readFile('css/' + filename, 'utf-8', function(err, content) {
-                    // if (err) {
-                    //     onError(err);
-                    //     return;
-                    // }
+         await readdir('css/', function(err, filenames) {
+            if (err) {
+              onError(err);
+              return;
+            }
+            filenames.forEach(async function(filename) {
+                console.log('Lecture de ' + filename);
+                fs.readFile('css/' + filename, 'utf-8', function(err, content) {
+                    if (err) {
+                        onError(err);
+                        return;
+                    }
                     // console.log('\t on a pu le lire');
-                    const cssUsed = styleOfCss.match(/\.-?[_a-zA-Z]+[_a-zA-Z0-9-]*\s*\{/gm);
+                    const cssUsed = content.match(/\.-?[_a-zA-Z]+[_a-zA-Z0-9-]*\s*\{/gm);
                     if(cssUsed != null || cssUsed != undefined){
                         // console.log('\t check du css');
                         let tempClassChecked = [];
@@ -88,27 +97,26 @@ const checkCss = async (page, arrayCssUsed, arrayCssUnused, styles) => {
                         });
                     }
                     // return process.kill(process.pid);
-                    // console.log('\n \n LECTURE DE : ' + filename + ' TERMINEE \n \n');
-                    // return true;         
-            //   });
+                    console.log('\n \n LECTURE DE : ' + filename + ' TERMINEE \n \n');
+                    return true;         
+              });
             });
-            // console.log('\n \n FOR EACH TERMINEEEEE \n \n');
+            console.log('\n \n FOR EACH TERMINEEEEE \n \n');
             // return process.kill(process.pid);
-            // return true;
-        // });
+            return true;
+        });
     // } catch (err){
     //     console.log(err);
     // }
     // console.log('\n \n FIN DU TRY CATCH \n \n')
-    // console.log('\n\n IN THE EEEEEEND \n\n');
-    // return true;
+    console.log('\n\n IN THE EEEEEEND \n\n');
+    return true;
 }
 
 const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCssUnused) => {
     if(urlList.length > 0){
         let page = await browser.newPage();
         const url = urlList.shift();
-        let styles = [];
         if(urlListCrawled.includes(url)){
             return getAllUrl(browser, urlList, urlListCrawled, arrayCssUsed, arrayCssUnused);
         }
@@ -117,15 +125,14 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
             if(response.request().resourceType() === 'stylesheet') {
                 const url = await response.url();
                 const styleContent = await response.text();
-                styles.push(styleContent);
-                // const nameCss = url.match(/[^/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/);
-                // if(nameCss != null || nameCss != undefined){
-                //     fs.access('./css/'+nameCss[0], fs.F_OK, (err) => {
-                //         if (err) {
-                //             fs.writeFileSync('./css/'+nameCss[0], styleContent);
-                //         }
-                //     });
-                // }
+                const nameCss = url.match(/[^/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/);
+                if(nameCss != null || nameCss != undefined){
+                    fs.access('./css/'+nameCss[0], fs.F_OK, (err) => {
+                        if (err) {
+                            fs.writeFileSync('./css/'+nameCss[0], styleContent);
+                        }
+                    });
+                }
             }
         });
         try {
@@ -164,13 +171,13 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
         urlListCrawled.push(url);
         urlList = mergeArrays(urlList,allHrefs,allDataUrls);
 
-        await checkCss(page, arrayCssUsed, arrayCssUnused, styles);
+        await checkCss(page, arrayCssUsed, arrayCssUnused);
         console.log('\n\n ON SORT DU CHECKCSS \n\n');
 
         await page.close();
-        // if(urlList.length > 200){
-        //     urlList = [];
-        // }
+        if(urlList.length > 200){
+            urlList = [];
+        }
         return getAllUrl(browser, urlList, urlListCrawled, arrayCssUsed, arrayCssUnused);
     } else {
         // console.log('Fin de la récursivité');
@@ -179,6 +186,29 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
     // console.log('Si on passe là, il y a un léger problème.');
 }
 
+const getCssFromUrl = async (browser, url = '') => {
+  const page = await browser.newPage();
+  page.on('response',async response => {
+    if(response.request().resourceType() === 'stylesheet') {
+        const url = await response.url();
+        const styleContent = await response.text();
+        const nameCss = url.match(/[^/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/);
+        let allClasses = [];
+        if(nameCss != null || nameCss != undefined){
+            fs.writeFileSync('./css/'+nameCss[0], styleContent);
+            const cssUsed = styleContent.match(/\.-?[_a-zA-Z]+[_a-zA-Z0-9-]*\s*\{/gm);
+                if(cssUsed != null || cssUsed != undefined){
+                    cssUsed.forEach(async function(cssClassName){
+                        const classNamePurified = cssClassName.replace(/{/,'');
+                        allClasses.push(classNamePurified);
+                    });
+                }
+        }
+    }
+  });
+  await page.goto(url);
+  return allClasses;
+}
 
 const scrap = async () => {
     const browser = await puppeteer.launch({ headless: false });
