@@ -1,5 +1,8 @@
 const puppeteer = require('puppeteer');
 const fs  = require('fs');
+const { SlowBuffer } = require('buffer');
+const util = require('util');
+
 
 
 
@@ -88,8 +91,13 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
             if(response.request().resourceType() === 'stylesheet') {
                 //TODO trycatch par ici je crois ?
                 const url = await response.url();
-                const styleContent = await response.text();
-                styles.push(styleContent);
+                try {
+                    const styleContent = await response.text();
+                    styles.push(styleContent);
+                } catch (error){
+                    console.log('Erreur de lecture de : '+ url);
+                }
+                
             }
         });
         try {
@@ -100,7 +108,7 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
         }
         await page.waitForSelector('body');
         const allHrefs = await page.evaluate(() =>
-            [...document.querySelectorAll('a[href*="local.selexium.com"]')].map(link => link.href)
+            [...document.querySelectorAll('a[href^="http://local.selexium.com/"], a[href^="/"]')].map(link => link.href)
         );
         const allDataUrls = await page.evaluate(() => 
                 [...document.querySelectorAll('[data-url]')].map(function(element){
@@ -124,6 +132,9 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
                     }
                 })    
         );
+
+        // console.log(util.inspect(allHrefs, { maxArrayLength: null }))
+        // return process.kill(process.pid);
         
         urlListCrawled.push(url);
         urlList = mergeArrays(urlList,allHrefs,allDataUrls);
