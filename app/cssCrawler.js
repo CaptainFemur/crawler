@@ -113,23 +113,23 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
         const allDataUrls = await page.evaluate(() => 
                 [...document.querySelectorAll('[data-url]')].map(function(element){
                     const dataUrl = element.getAttribute('data-url');
-                    if(isBase64(dataUrl) == false){
-                        if(dataUrl.includes('local.selexium.com') && !dataUrl.startsWith('#') && !dataUrl.startsWith('mailto') && !dataUrl.includes('linkedin.com') && !dataUrl.includes('facebook.com') && !dataUrl.includes('twitter.com')){
+                    // if(isBase64(dataUrl) == false){
+                        if(dataUrl.includes('local.selexium.com') && !dataUrl.startsWith('#') && !dataUrl.startsWith('mailto') && !dataUrl.includes('linkedin.com') && !dataUrl.includes('facebook.com') && !dataUrl.includes('twitter.com') && !dataUrl.includes('plus.google.com')){
                             return dataUrl;
                         } else {
                             return ;
                         } 
-                    } else {
-                        let decodeUrl = atob(dataUrl);
-                        if(decodeUrl.startsWith('/')){
-                            decodeUrl = 'http://local.selexium.com' + decodeUrl;
-                        }
-                        if(decodeUrl.includes('local.selexium.com') && !decodeUrl.startsWith('#') && !decodeUrl.startsWith('mailto') && !decodeUrl.includes('linkedin.com') && !decodeUrl.includes('facebook.com') && !decodeUrl.includes('twitter.com')){
-                            return decodeUrl;
-                        } else {
-                            return ;
-                        } 
-                    }
+                    // } else {
+                    //     let decodeUrl = atob(dataUrl);
+                    //     if(decodeUrl.startsWith('/')){
+                    //         decodeUrl = 'http://local.selexium.com' + decodeUrl;
+                    //     }
+                    //     if(decodeUrl.includes('local.selexium.com') && !decodeUrl.startsWith('#') && !decodeUrl.startsWith('mailto') && !decodeUrl.includes('linkedin.com') && !decodeUrl.includes('facebook.com') && !decodeUrl.includes('twitter.com') && !dataUrl.includes('plus.google.com')){
+                    //         return decodeUrl;
+                    //     } else {
+                    //         return ;
+                    //     } 
+                    // }
                 })    
         );
 
