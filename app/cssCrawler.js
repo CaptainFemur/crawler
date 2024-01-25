@@ -108,13 +108,13 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
         }
         await page.waitForSelector('body');
         const allHrefs = await page.evaluate(() =>
-            [...document.querySelectorAll('a[href^="http://local.selexium.com/"], a[href^="/"]')].map(link => link.href)
+            [...document.querySelectorAll('a[href^="http://localhost:8000/"], a[href^="/"]')].map(link => link.href)
         );
         const allDataUrls = await page.evaluate(() => 
                 [...document.querySelectorAll('[data-url]')].map(function(element){
                     const dataUrl = element.getAttribute('data-url');
                     // if(isBase64(dataUrl) == false){
-                        if(dataUrl.includes('local.selexium.com') && !dataUrl.startsWith('#') && !dataUrl.startsWith('mailto') && !dataUrl.includes('linkedin.com') && !dataUrl.includes('facebook.com') && !dataUrl.includes('twitter.com') && !dataUrl.includes('plus.google.com')){
+                        if(dataUrl.includes('localhost:8000') && !dataUrl.startsWith('#') && !dataUrl.startsWith('mailto') && !dataUrl.includes('linkedin.com') && !dataUrl.includes('facebook.com') && !dataUrl.includes('twitter.com') && !dataUrl.includes('plus.google.com')){
                             return dataUrl;
                         } else {
                             return ;
@@ -122,9 +122,9 @@ const getAllUrl = async (browser, urlList, urlListCrawled, arrayCssUsed, arrayCs
                     // } else {
                     //     let decodeUrl = atob(dataUrl);
                     //     if(decodeUrl.startsWith('/')){
-                    //         decodeUrl = 'http://local.selexium.com' + decodeUrl;
+                    //         decodeUrl = 'http://localhost:8000' + decodeUrl;
                     //     }
-                    //     if(decodeUrl.includes('local.selexium.com') && !decodeUrl.startsWith('#') && !decodeUrl.startsWith('mailto') && !decodeUrl.includes('linkedin.com') && !decodeUrl.includes('facebook.com') && !decodeUrl.includes('twitter.com') && !dataUrl.includes('plus.google.com')){
+                    //     if(decodeUrl.includes('localhost:8000') && !decodeUrl.startsWith('#') && !decodeUrl.startsWith('mailto') && !decodeUrl.includes('linkedin.com') && !decodeUrl.includes('facebook.com') && !decodeUrl.includes('twitter.com') && !dataUrl.includes('plus.google.com')){
                     //         return decodeUrl;
                     //     } else {
                     //         return ;
@@ -157,7 +157,7 @@ const scrap = async () => {
     let urlListCrawled = [];
     let arrayCssUsed = [];
     let arrayCssUnused = [];
-    let urlList = ["http://local.selexium.com/"];
+    let urlList = ["http://localhost:8000/"];
     const result = await getAllUrl(browser, urlList, urlListCrawled, arrayCssUsed, arrayCssUnused);
     browser.close();
     return result;
