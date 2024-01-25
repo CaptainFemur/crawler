@@ -29,7 +29,7 @@ for (const entry of css_coverage) {
 
   filename = entry.url.split('/').pop();
 
-  fs.writeFile('./css/'+filename, final_css_bytes, error => {
+  fs.writeFile('./app/css/'+filename, final_css_bytes, error => {
     if (!error) {
       console.log('File saved');
     }
