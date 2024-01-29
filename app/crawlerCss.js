@@ -36,3 +36,4 @@ for (const entry of css_coverage) {
   });
 }
 })();
+
