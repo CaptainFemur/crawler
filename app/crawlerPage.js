@@ -19,6 +19,10 @@ async function getAllLinks(siteUrl) {
     const visitedLinks = new Set(); // Utilisé pour éviter de revisiter les mêmes liens
 
     async function crawlPage(url) {
+      //pour clean les # dans les urls
+      let tempUrlWithoutAnchor = url.match(/(.*)\/#/);
+      url = tempUrlWithoutAnchor !== null ? tempUrlWithoutAnchor[1] : url;
+
         if (visitedLinks.has(url)) {
             return;
         }
@@ -46,7 +50,7 @@ async function getAllLinks(siteUrl) {
 }
 
 // Utilisation de la fonction
-const siteUrl = 'http://localhost:8000';
+const siteUrl = 'http://localhost:8000/';
 getAllLinks(siteUrl)
   .then(result => {
     console.log('Liste de toutes les pages du site:', result);
