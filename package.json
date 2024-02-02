@@ -1,6 +1,7 @@
 {
     "name": "slx/crawler",
     "description": "Crawler de Classes CSS",
+    "type": "module",
     "keywords": [
         "crawler",
         "css"

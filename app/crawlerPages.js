@@ -1,6 +1,5 @@
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
 
-//Todo exclure les ancres ?
 async function getUrls(page, siteUrl) {
     let urls = await page.evaluate((siteUrl) => {
         const urlArray = Array.from(document.links).filter((link) => link.href.startsWith(siteUrl) && !link.href.startsWith(siteUrl+'#') && !link.href.endsWith('.pdf') && !link.href.endsWith('.png')  && !link.href.endsWith('.jpg')).map((link) => link.href);
@@ -36,7 +35,7 @@ async function getAllLinks(siteUrl) {
         for (const link of linksOnPage) {
             // Assurez-vous que le lien appartient au même domaine (évite les liens externes)
             const isSameDomain = new URL(link).hostname === new URL(siteUrl).hostname;
-            if (isSameDomain) {
+            if (isSameDomain && visitedLinks.size < 10) {
                 await crawlPage(link);
             }
         }
@@ -58,3 +57,5 @@ getAllLinks(siteUrl)
   .catch(error => {
     console.error('Une erreur s\'est produite:', error);
   });
+
+// export default getAllLinks;
