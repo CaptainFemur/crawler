@@ -1,17 +1,17 @@
 function extractCssSelectors(cssContent) {
-    const selectorRegex = /(?:^|}|\n)([^{}\/@]+)(?=\s*{)/g;
-    const matches = [];
-    let match;
-  
-    while ((match = selectorRegex.exec(cssContent)) !== null) {
-      if (match[1] && !match[1].includes('@media')) {
-        // Diviser les sélecteurs si plusieurs sont présents sur une même ligne
-        const selectorsOnLine = match[1].split(',').map(selector => selector.trim());
-        matches.push(...selectorsOnLine);
-      }
+  const selectorRegex = /(?:^|}|\n)([^{}\/@]+)(?=\s*{)/g;
+  const matches = new Set();
+  let match;
+
+  while ((match = selectorRegex.exec(cssContent)) !== null) {
+    if (match[1] && !match[1].includes('@media')) {
+      // Diviser les sélecteurs si plusieurs sont présents sur une même ligne
+      const selectorsOnLine = match[1].split(',').map(selector => selector.trim());
+      matches.add(...selectorsOnLine);
     }
-    return matches;
   }
+  return matches;
+}
   
   
   // Exemple d'utilisation

@@ -1,20 +1,21 @@
 import puppeteer from 'puppeteer';
 import fs from "fs";
+let cssSelectors = new Set();
 
-// function extractCssSelectors(cssContent) {
-//     const selectorRegex = /(?:^|}|\n)([^{}\/@]+)(?=\s*{)/g;
-//     const matches = [];
-//     let match;
+function extractCssSelectors(cssContent) {
+    const selectorRegex = /(?:^|}|\n)([^{}\/@]+)(?=\s*{)/g;
+    const matches = new Set();
+    let match;
   
-//     while ((match = selectorRegex.exec(cssContent)) !== null) {
-//       if (match[1] && !match[1].includes('@media')) {
-//         // Diviser les sélecteurs si plusieurs sont présents sur une même ligne
-//         const selectorsOnLine = match[1].split(',').map(selector => selector.trim());
-//         matches.push(...selectorsOnLine);
-//       }
-//     }
-//     return matches;
-// }
+    while ((match = selectorRegex.exec(cssContent)) !== null) {
+      if (match[1] && !match[1].includes('@media')) {
+        // Diviser les sélecteurs si plusieurs sont présents sur une même ligne
+        const selectorsOnLine = match[1].split(',').map(selector => selector.trim());
+        matches.add(...selectorsOnLine);
+      }
+    }
+    return matches;
+}
 
 async function cssCoveragito(css_coverage) {
     let final_css_bytes = '';
@@ -34,45 +35,48 @@ async function cssCoveragito(css_coverage) {
           previousRange = range.end;
         }
 
-        console.log('Fichier '+filename);
+        let newSelectors = extractCssSelectors(final_css_bytes);
+        cssSelectors = new Set([...cssSelectors, ...newSelectors]);
 
-        try {
-            let contentFile = fs.readFileSync('./app/css/'+filename, {'encoding': 'utf8'});
+        // console.log('Fichier '+filename);
 
-            console.log(contentFile);
-            console.log(final_css_bytes);
+        // try {
+        //     let contentFile = fs.readFileSync('./app/css/'+filename, {'encoding': 'utf8'});
 
-            const linesFichierExistant = contentFile.split('\n');
-            const linesRecues = final_css_bytes.split('\n');
+        //     console.log(contentFile);
+        //     console.log(final_css_bytes);
 
-            // Garder les parties communes de A et B
-            const commonLines = linesFichierExistant.filter(line => linesRecues.includes(line));
+        //     const linesFichierExistant = contentFile.split('\n');
+        //     const linesRecues = final_css_bytes.split('\n');
+
+        //     // Garder les parties communes de A et B
+        //     const commonLines = linesFichierExistant.filter(line => linesRecues.includes(line));
     
-            // Ajouter les parties de B qui ne sont pas dans A
-            const newLines = linesRecues.filter(line => !linesFichierExistant.includes(line));
+        //     // Ajouter les parties de B qui ne sont pas dans A
+        //     const newLines = linesRecues.filter(line => !linesFichierExistant.includes(line));
     
-            // Fusionner les parties communes avec les nouvelles parties de B
-            const mergedContent = commonLines.concat(newLines).join('\n');
+        //     // Fusionner les parties communes avec les nouvelles parties de B
+        //     const mergedContent = commonLines.concat(newLines).join('\n');
     
-            // Écrire le résultat dans le fichier A
-            fs.writeFile('./app/css/'+filename, mergedContent, 'utf8', (err) => {
-              if (err) {
-                console.error(`Erreur lors de l'écriture dans le fichier : ${err}`);
-                return;
-              }
-              console.log('Opération de fusion réussie.');
-            });
-        } catch(e){
-            console.log(e.code);
-            //Si fichier pas existant on le créee
-            if (e.code === "ENOENT") {
-                fs.writeFile('./app/css/'+filename, final_css_bytes, error => {
-                    if (!error) {
-                    console.log('Fichier crée.');
-                    }
-                });
-            }
-        }
+        //     // Écrire le résultat dans le fichier A
+        //     fs.writeFile('./app/css/'+filename, mergedContent, 'utf8', (err) => {
+        //       if (err) {
+        //         console.error(`Erreur lors de l'écriture dans le fichier : ${err}`);
+        //         return;
+        //       }
+        //       console.log('Opération de fusion réussie.');
+        //     });
+        // } catch(e){
+        //     console.log(e.code);
+        //     //Si fichier pas existant on le créee
+        //     if (e.code === "ENOENT") {
+        //         fs.writeFile('./app/css/'+filename, final_css_bytes, error => {
+        //             if (!error) {
+        //             console.log('Fichier crée.');
+        //             }
+        //         });
+        //     }
+        // }
         
 
     //   fs.readFile('./app/css/'+filename, 'utf8', (err, contentFile) => {
@@ -154,23 +158,31 @@ async function getCoverageSite(siteUrl) {
         for (const link of linksOnPage) {
             // Assurez-vous que le lien appartient au même domaine (évite les liens externes)
             const isSameDomain = new URL(link).hostname === new URL(siteUrl).hostname;
-            if (isSameDomain && visitedLinks.size < 3) {
+            if (isSameDomain && visitedLinks.size < 10) {
                 await crawlPage(link);
             }
         }
     }
 
-  await crawlPage(siteUrl);
+    await crawlPage(siteUrl);
 
-  await browser.close();
-
-  return Array.from(visitedLinks);
+    await browser.close();
+    return Array.from(visitedLinks);
 }
 
 const siteUrl = 'http://localhost:8000/';
 getCoverageSite(siteUrl)
   .then(result => {
-    console.log('Liste de toutes les pages du site:', result);
+    fs.writeFile('./app/css/pagesCrawlees.txt', result.join('\n'), 'utf-8', (err) => {
+        if(err) console.log(err);
+    });
+    fs.writeFile('./app/css/cssInutilises.txt', Array.from(cssSelectors).join('\n'), 'utf-8', (err) => {
+        if(err) console.log(err);
+    });
+    // console.log('Liste de toutes les pages du site:', result);
+    // console.log('Liste des css pas utilisés : ', cssSelectors);
+    // console.log('Liste de toutes les pages du site:', result.join('\n'));
+    // console.log('Liste des css pas utilisés : ', cssSelectors);
   })
   .catch(error => {
     console.error('Une erreur s\'est produite:', error);
