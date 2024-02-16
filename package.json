@@ -9,6 +9,7 @@
     "require": {},
     "require-dev": {},
     "dependencies": {
+        "inquirer": "^9.2.14",
         "puppeteer": "^5.5.0"
     }
 }

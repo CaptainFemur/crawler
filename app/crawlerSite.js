@@ -1,122 +1,60 @@
 import puppeteer from 'puppeteer';
 import fs from "fs";
-let cssSelectors = new Set();
+import inquirer from 'inquirer';
+
+let cssSelectorsUnused = new Set();
+let cssSelectorsUsed = new Set();
 
 function extractCssSelectors(cssContent) {
     const selectorRegex = /(?:^|}|\n)([^{}\/@]+)(?=\s*{)/g;
+    const mediaQueryRegex = /@media\s*\([^)]*\)\s*{[^}]*}[^}]*}/g;
     const matches = new Set();
     let match;
+
+    // Exclure les sélecteurs dans les médias queries
+    const cssContentWithoutMediaQueries = cssContent.replaceAll(mediaQueryRegex, '');
+    // console.log(cssContentWithoutMediaQueries);
   
-    while ((match = selectorRegex.exec(cssContent)) !== null) {
-      if (match[1] && !match[1].includes('@media')) {
-        // Diviser les sélecteurs si plusieurs sont présents sur une même ligne
-        const selectorsOnLine = match[1].split(',').map(selector => selector.trim());
-        matches.add(...selectorsOnLine);
-      }
+    while ((match = selectorRegex.exec(cssContentWithoutMediaQueries)) !== null) {
+        if (match[1]) {
+            // Diviser les sélecteurs si plusieurs sont présents sur une même ligne
+            const selectorsOnLine = match[1].split(',').map(selector => selector.trim());
+            matches.add(...selectorsOnLine);
+        }
     }
     return matches;
 }
 
-async function cssCoveragito(css_coverage) {
-    let final_css_bytes = '';
-    let total_bytes = 0;
-    let used_bytes = 0;
+async function cssCoveragito(css_coverage, url) {
+    let final_css_bytes_unused = '';
+    let final_css_bytes_used = '';
    
     for (const entry of css_coverage) {
         let filename = entry.url.split('/').pop();
         if(filename === "") continue;
 
-        final_css_bytes = "";
-        total_bytes += entry.text.length;
+        final_css_bytes_unused = "";
         let previousRange = 0;
         for (const range of entry.ranges) {
-          used_bytes += range.end - range.start - 1;
-          if(previousRange != 0) final_css_bytes += entry.text.slice(previousRange, range.start) + '\n';
+          if(previousRange != 0) final_css_bytes_unused += entry.text.slice(previousRange, range.start) + '\n';
+          final_css_bytes_used += entry.text.slice(range.start, range.end) + '\n';
           previousRange = range.end;
         }
 
-        let newSelectors = extractCssSelectors(final_css_bytes);
-        cssSelectors = new Set([...cssSelectors, ...newSelectors]);
+        let newSelectorsUnused = extractCssSelectors(final_css_bytes_unused);
+        let newSelectorsUsed = extractCssSelectors(final_css_bytes_used);
 
-        // console.log('Fichier '+filename);
+        newSelectorsUsed.forEach((value) => {
+            if(cssSelectorsUnused.has(value)) cssSelectorsUnused.delete(value);
+            cssSelectorsUsed.add(value);
+        });
 
-        // try {
-        //     let contentFile = fs.readFileSync('./app/css/'+filename, {'encoding': 'utf8'});
-
-        //     console.log(contentFile);
-        //     console.log(final_css_bytes);
-
-        //     const linesFichierExistant = contentFile.split('\n');
-        //     const linesRecues = final_css_bytes.split('\n');
-
-        //     // Garder les parties communes de A et B
-        //     const commonLines = linesFichierExistant.filter(line => linesRecues.includes(line));
-    
-        //     // Ajouter les parties de B qui ne sont pas dans A
-        //     const newLines = linesRecues.filter(line => !linesFichierExistant.includes(line));
-    
-        //     // Fusionner les parties communes avec les nouvelles parties de B
-        //     const mergedContent = commonLines.concat(newLines).join('\n');
-    
-        //     // Écrire le résultat dans le fichier A
-        //     fs.writeFile('./app/css/'+filename, mergedContent, 'utf8', (err) => {
-        //       if (err) {
-        //         console.error(`Erreur lors de l'écriture dans le fichier : ${err}`);
-        //         return;
-        //       }
-        //       console.log('Opération de fusion réussie.');
-        //     });
-        // } catch(e){
-        //     console.log(e.code);
-        //     //Si fichier pas existant on le créee
-        //     if (e.code === "ENOENT") {
-        //         fs.writeFile('./app/css/'+filename, final_css_bytes, error => {
-        //             if (!error) {
-        //             console.log('Fichier crée.');
-        //             }
-        //         });
-        //     }
-        // }
-        
-
-    //   fs.readFile('./app/css/'+filename, 'utf8', (err, contentFile) => {
-    //     if (err) {
-    //         fs.writeFile('./app/css/'+filename, final_css_bytes, error => {
-    //             if (!error) {
-    //               console.log('Fichier crée.');
-    //             }
-    //         });
-    //         return;
-    //     }
-
-    //     console.debug(final_css_bytes);
-   
-    
-    //     // Comparer et fusionner les contenus
-    //     const linesFichierExistant = contentFile.split('\n');
-    //     const linesRecues = final_css_bytes.split('\n');
-
-    //     // Garder les parties communes de A et B
-    //     const commonLines = linesFichierExistant.filter(line => linesRecues.includes(line));
-
-    //     // Ajouter les parties de B qui ne sont pas dans A
-    //     const newLines = linesRecues.filter(line => !linesFichierExistant.includes(line));
-
-    //     // Fusionner les parties communes avec les nouvelles parties de B
-    //     const mergedContent = commonLines.concat(newLines).join('\n');
-
-    
-    //     // Écrire le résultat dans le fichier A
-    //     fs.writeFile('./app/css/'+filename, mergedContent, 'utf8', (err) => {
-    //       if (err) {
-    //         console.error(`Erreur lors de l'écriture dans le fichier : ${err}`);
-    //         return;
-    //       }
-    //       console.log('Opération de fusion réussie.');
-    //     });
-    //   });
-    
+        newSelectorsUnused.forEach((value) => {
+            if(!cssSelectorsUsed.has(value)) cssSelectorsUnused.add(value);
+        });
+  
     }
+
 } 
 
 async function getUrls(page, siteUrl) {
@@ -140,6 +78,7 @@ async function getCoverageSite(siteUrl) {
         //pour clean les # dans les urls
         let tempUrlWithoutAnchor = url.match(/(.*)\/#/);
         url = tempUrlWithoutAnchor !== null ? tempUrlWithoutAnchor[1] : url;
+        if(!url.endsWith('/')) url = url+"/";
 
         if (visitedLinks.has(url)) {
             return;
@@ -151,7 +90,7 @@ async function getCoverageSite(siteUrl) {
         const css_coverage = await page.coverage.stopCSSCoverage();
         visitedLinks.add(url);
 
-        cssCoveragito(css_coverage);
+        cssCoveragito(css_coverage, url);
 
         const linksOnPage = await getUrls(page, siteUrl);
 
@@ -170,20 +109,30 @@ async function getCoverageSite(siteUrl) {
     return Array.from(visitedLinks);
 }
 
-const siteUrl = 'http://localhost:8000/';
-getCoverageSite(siteUrl)
-  .then(result => {
-    fs.writeFile('./app/css/pagesCrawlees.txt', result.join('\n'), 'utf-8', (err) => {
-        if(err) console.log(err);
+const questions = [
+  {
+    type: 'input',
+    name: 'siteUrl',
+    message: "Url du site que vous souhaitez crawler :",
+  }
+];
+inquirer.prompt(questions).then(answers => {
+    const siteUrl = answers.siteUrl;
+    getCoverageSite(siteUrl)
+    .then(result => {
+        fs.writeFile('./app/css/pagesCrawlees.txt', result.join('\n'), 'utf-8', (err) => {
+            if(err) console.log(err);
+        });
+        fs.writeFile('./app/css/cssInutilises.txt', Array.from(cssSelectorsUnused).join('\n'), 'utf-8', (err) => {
+            if(err) console.log(err);
+        });
+        fs.writeFile('./app/css/cssUtilises.txt', Array.from(cssSelectorsUsed).join('\n'), 'utf-8', (err) => {
+            if(err) console.log(err);
+        });
+    })
+    .catch(error => {
+        console.error('Une erreur s\'est produite:', error);
     });
-    fs.writeFile('./app/css/cssInutilises.txt', Array.from(cssSelectors).join('\n'), 'utf-8', (err) => {
-        if(err) console.log(err);
-    });
-    // console.log('Liste de toutes les pages du site:', result);
-    // console.log('Liste des css pas utilisés : ', cssSelectors);
-    // console.log('Liste de toutes les pages du site:', result.join('\n'));
-    // console.log('Liste des css pas utilisés : ', cssSelectors);
-  })
-  .catch(error => {
-    console.error('Une erreur s\'est produite:', error);
-  });
+});
+// 
+// const siteUrl = 'http://localhost:8000/';
