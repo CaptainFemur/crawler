@@ -97,7 +97,7 @@ async function getCoverageSite(siteUrl) {
         for (const link of linksOnPage) {
             // Assurez-vous que le lien appartient au même domaine (évite les liens externes)
             const isSameDomain = new URL(link).hostname === new URL(siteUrl).hostname;
-            if (isSameDomain && visitedLinks.size < 10) {
+            if (isSameDomain /*&& visitedLinks.size < 10*/) {
                 await crawlPage(link);
             }
         }
